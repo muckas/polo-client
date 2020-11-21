@@ -12,11 +12,15 @@ def getAllBalances(total=False):
   for currency in balances.copy():
     if balances[currency]['btcValue'] == '0.00000000':
       balances.pop(currency)
+    else:
+      balances[currency]['available'] = float(balances[currency]['available']) 
+      balances[currency]['onOrders'] = float(balances[currency]['onOrders']) 
+      balances[currency]['btcValue'] = float(balances[currency]['btcValue']) 
   if total:
     totalBtc = 0.0
     for currency in balances:
       totalBtc += float(balances[currency]['btcValue'])
-    return f'{totalBtc:.8f}'
+    return float(f'{totalBtc:.8f}')
   else:
     return balances
 
