@@ -22,20 +22,37 @@ tickerPriceLbl.grid(row=0, column=1)
 def tickerRefreshBtnClick():
   data = polo.returnTicker()
   pair = tickerPairEnt.get()
-  tickerPriceLbl.config(text=data[pair]['last'][:10])
+  price = data[pair]['last'][:9] # displaying first 8 digits of the price
+  tickerPriceLbl.config(text=price)
 
 tickerRefreshBtn = Button(tickerFrame, text='Refresh', command=tickerRefreshBtnClick)
 tickerRefreshBtn.grid(row=1)
 
 # WALLET FRAME
-walletBalanceLbl = Label(walletFrame, text='Balance')
-walletBalanceLbl.grid(row=0, column=0)
+walletBalancesLbls = [] # list of balance labels
+def walletDrawBalances():
+  global walletBalancesLbls
+  for label in walletBalancesLbls:
+    label.destroy()
+  walletBalancesLbls = []
+  balance = api.getAllBalances(total=True)
+  walletTotalLbl.config(text=f'Total BTC: {balance}') # formatting for 8 digits after dots
+  balances = api.getAllBalances()
+  for currency in balances:
+    walletBalancesLbls.append(Label(walletFrame, text=f'{currency}: {balances[currency]["available"]}'))
+  for label in walletBalancesLbls:
+    label.pack(anchor='w')
 
 def walletRefreshBtnClick():
-  balance = api.getTotalBTC()
-  walletBalanceLbl.config(text=balance)
+  walletDrawBalances()
 
 walletRefreshBtn = Button(walletFrame, text='Refresh', command=walletRefreshBtnClick)
-walletRefreshBtn.grid(row=1)
+walletRefreshBtn.pack()
 
+walletTotalLbl = Label(walletFrame, text='Balance')
+walletTotalLbl.pack()
+
+# START
+tickerRefreshBtnClick()
+walletRefreshBtnClick()
 root.mainloop()

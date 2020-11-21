@@ -7,17 +7,20 @@ with open('secret') as f:
 
 polo = Poloniex(key=api_key, secret=api_secret)
 
-def getTotalBTC():
-  data = polo.returnCompleteBalances()
-  for currency in data.copy():
-    if data[currency]['btcValue'] == '0.00000000':
-      data.pop(currency)
-  totalBtc = 0.0
-  for currency in data:
-    totalBtc += float(data[currency]['btcValue'])
-  return totalBtc
+def getAllBalances(total=False):
+  balances = polo.returnCompleteBalances()
+  for currency in balances.copy():
+    if balances[currency]['btcValue'] == '0.00000000':
+      balances.pop(currency)
+  if total:
+    totalBtc = 0.0
+    for currency in balances:
+      totalBtc += float(balances[currency]['btcValue'])
+    return f'{totalBtc:.8f}'
+  else:
+    return balances
 
 # TESTING
 if __name__ == '__main__':
-  output = getTotalBalance()
+  output = getAllBalances(True)
   print(output)
