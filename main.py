@@ -1,30 +1,27 @@
 from tkinter import *
-from poloniex import Poloniex
-
-with open('key') as f:
-  api_key = f.read().rstrip('\n')
-with open('secret') as f:
-  api_secret = f.read().rstrip('\n')
-
-polo = Poloniex(key=api_key, secret=api_secret)
+import api
+from api import polo
 
 root = Tk()
 root.title('Poloniex Client')
 img = PhotoImage(file = 'polo.png')
 root.iconphoto(True, img)
+tickerFrame = LabelFrame(root, text='Ticker', padx=5, pady=5)
+tickerFrame.pack()
 
-entry = Entry(root)
-entry.grid(row=0, column=0)
-entry.insert(0, 'USDT_BTC')
+pairEnt = Entry(tickerFrame, width=10)
+pairEnt.grid(row=0, column=0)
+pairEnt.insert(0, 'USDT_BTC')
+
+priceLbl = Label(tickerFrame, text=' ')
+priceLbl.grid(row=0, column=1)
 
 def click():
   data = polo.returnTicker()
-  pair = entry.get()
-  label = Label(root, text=data[pair]['last'])
-  label.grid_forget()
-  label.grid(row=0, column=1)
+  pair = pairEnt.get()
+  priceLbl.config(text=data[pair]['last'])
 
-button = Button(root, text='Refresh', command=click)
-button.grid(row=1)
+refreshBtn = Button(tickerFrame, text='Refresh', command=click)
+refreshBtn.grid(row=1)
 
 root.mainloop()
