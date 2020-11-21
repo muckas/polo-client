@@ -1,17 +1,36 @@
+import time
 from tkinter import *
 import api
 from api import polo
+import globalvars
+import threading
 
 root = Tk()
 root.title('Poloniex Client')
 img = PhotoImage(file = 'polo.png')
 root.iconphoto(True, img)
+
+# FRAMES
 tickerFrame = LabelFrame(root, text='Ticker', padx=5, pady=5)
-tickerFrame.grid(row=0, column=0, padx=5, pady=5)
+tickerFrame.grid(row=0, column=0, padx=5, pady=5, sticky='nw')
 walletFrame = LabelFrame(root, text='Wallet', padx=5, pady=5)
-walletFrame.grid(row=0, column=1, padx=5, pady=5)
+walletFrame.grid(row=0, column=1, padx=5, pady=5, sticky='nw')
+
+#TICKER THREAD
+def tickerUpdate(oneshot=False):
+  while True:
+    ticker = polo.returnTicker()
+    globalvars.ticker = ticker
+    time.sleep(1)
+    if oneshot:
+      break
+
+# START THREADS
+tickerThread = threading.Thread(target=tickerUpdate)
+tickerThread.start()
 
 # TICKER FRAME
+tickerUpdate(oneshot=True)
 tickerPairEnt = Entry(tickerFrame, width=10)
 tickerPairEnt.grid(row=0, column=0)
 tickerPairEnt.insert(0, 'USDT_BTC')
@@ -20,9 +39,8 @@ tickerPriceLbl = Label(tickerFrame, text='0.00000000')
 tickerPriceLbl.grid(row=0, column=1)
 
 def tickerRefreshBtnClick():
-  data = polo.returnTicker()
   pair = tickerPairEnt.get()
-  price = data[pair]['last'][:9] # displaying first 8 digits of the price
+  price = globalvars.ticker[pair]['last'][:9] # displaying first 8 digits of the price
   tickerPriceLbl.config(text=price)
 
 tickerRefreshBtn = Button(tickerFrame, text='Refresh', command=tickerRefreshBtnClick)
