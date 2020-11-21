@@ -50,25 +50,32 @@ tickerRefreshBtn.grid(row=1)
 walletBalancesLbls = [] # list of balance labels
 def walletDrawBalances():
   global walletBalancesLbls
-  for label in walletBalancesLbls:
-    label.destroy()
+  for lbl in walletBalancesLbls:
+    lbl[0].destroy()
+    lbl[1].destroy()
   walletBalancesLbls = []
   balance = api.getAllBalances(total=True)
   walletTotalLbl.config(text=f'Total BTC: {balance}') # formatting for 8 digits after dots
   balances = api.getAllBalances()
   for currency in balances:
-    walletBalancesLbls.append(Label(walletFrame, text=f'{currency}: {balances[currency]["available"]}'))
-  for label in walletBalancesLbls:
-    label.pack(anchor='w')
+    walletBalancesLbls.append([
+      Label(walletFrame, text=f'{currency}:'),
+      Label(walletFrame, text=balances[currency]['available'])
+      ])
+  line = 3
+  for lbl in walletBalancesLbls:
+    lbl[0].grid(row=line, column=0, sticky='w')
+    lbl[1].grid(row=line, column=1, sticky='w')
+    line += 1
 
 def walletRefreshBtnClick():
   walletDrawBalances()
 
 walletRefreshBtn = Button(walletFrame, text='Refresh', command=walletRefreshBtnClick)
-walletRefreshBtn.pack()
+walletRefreshBtn.grid(row=0, column=0, columnspan=2)
 
 walletTotalLbl = Label(walletFrame, text='Balance')
-walletTotalLbl.pack()
+walletTotalLbl.grid(row=1, column=0, columnspan=2)
 
 # START
 tickerRefreshBtnClick()
