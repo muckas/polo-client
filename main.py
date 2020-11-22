@@ -4,6 +4,9 @@ import api
 from api import polo
 import globalvars
 import threading
+import database
+
+database.loadInitialData()
 
 root = Tk()
 root.title('Poloniex Client')
@@ -16,54 +19,8 @@ tickerFrame.grid(row=0, column=0, padx=5, pady=5, sticky='nw')
 walletFrame = LabelFrame(root, text='Wallet', padx=5, pady=5)
 walletFrame.grid(row=0, column=1, padx=5, pady=5, sticky='nw')
 
-# DEFINE THREADS
-def tickerUpdate(oneshot=False):
-  while True:
-    globalvars.ticker = polo.returnTicker()
-    if oneshot:
-      break
-    time.sleep(1)
-
-def balanceUpdate(oneshot=False):
-  while True:
-    globalvars.balances = api.getAllBalances()
-    globalvars.totalBtcBalance = api.getAllBalances(total=True)
-    if oneshot:
-      break
-    time.sleep(300)
-
-# START THREADS
-tickerThread = threading.Thread(target=tickerUpdate)
-tickerThread.start()
-
-balanceThread = threading.Thread(target=balanceUpdate)
-balanceThread.start()
-
-# FUNCTIONS
-def updateAvailablePairs():
-  pairs = globalvars.ticker.keys()
-  availablePairs = {}
-  for pair in pairs:
-    base, coin = pair.split('_')
-    if base in availablePairs.keys():
-      availablePairs[base].append(coin)
-    else:
-      availablePairs[base] = [coin]
-  globalvars.availablePairs = availablePairs
-
-def updateDisplayCurrencies():
-  pairs = globalvars.ticker.keys()
-  coins = ['BTC']
-  for pair in pairs:
-    if pair[-3:] == 'BTC':
-      base, coin = pair.split('_')
-      coins.append(base)
-  globalvars.displayCurrencies = coins
 
 # TICKER FRAME
-tickerUpdate(oneshot=True)
-updateAvailablePairs()
-
 tickerPairBaseVar = StringVar()
 tickerPairBaseVar.set('USDT')
 tickerPairCoinVar = StringVar()
@@ -111,8 +68,6 @@ tickerPairBaseVar.trace('w', tickerPairBaseChange)
 tickerPairCoinVar.trace('w', tickerPairCoinChange)
 
 # WALLET FRAME
-balanceUpdate(oneshot=True)
-updateDisplayCurrencies()
 walletDisplayCurrencyVar = StringVar()
 walletDisplayCurrencyVar.set('BTC')
 walletBalancesLbls = [] # list of balance labels
@@ -145,7 +100,6 @@ def walletDrawBalances(*args):
     line += 1
 
 def walletRefreshClick():
-  balanceUpdate(oneshot=True)
   walletDrawBalances()
 
 def walletRefresh():
