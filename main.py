@@ -36,25 +36,83 @@ def balanceUpdate(oneshot=False):
 tickerThread = threading.Thread(target=tickerUpdate)
 tickerThread.start()
 
+balanceThread = threading.Thread(target=balanceUpdate)
+balanceThread.start()
+
+# FUNCTIONS
+def updateAvailablePairs():
+  pairs = globalvars.ticker.keys()
+  availablePairs = {}
+  for pair in pairs:
+    base, coin = pair.split('_')
+    if base in availablePairs.keys():
+      availablePairs[base].append(coin)
+    else:
+      availablePairs[base] = [coin]
+  globalvars.availablePairs = availablePairs
+
+def updateDisplayCurrencies():
+  pairs = globalvars.ticker.keys()
+  coins = ['BTC']
+  for pair in pairs:
+    if pair[-3:] == 'BTC':
+      base, coin = pair.split('_')
+      coins.append(base)
+  globalvars.displayCurrencies = coins
+
 # TICKER FRAME
 tickerUpdate(oneshot=True)
-tickerPairEnt = Entry(tickerFrame, width=10)
-tickerPairEnt.grid(row=0, column=0)
-tickerPairEnt.insert(0, 'USDT_BTC')
+updateAvailablePairs()
+
+tickerPairBaseVar = StringVar()
+tickerPairBaseVar.set('USDT')
+tickerPairCoinVar = StringVar()
+tickerPairCoinVar.set('BTC')
 
 tickerPriceLbl = Label(tickerFrame, text='0.00000000')
-tickerPriceLbl.grid(row=0, column=1)
+tickerPriceLbl.grid(row=1, column=1)
 
-def tickerRefreshBtnClick():
-  pair = tickerPairEnt.get()
+def tickerRefresh(custom=False):
+  if custom:
+    pair = tickerPairEnt.get()
+  else:
+    pair = f'{tickerPairBaseVar.get()}_{tickerPairCoinVar.get()}'
   price = globalvars.ticker[pair]['last'][:9] # displaying first 8 digits of the price
   tickerPriceLbl.config(text=price)
 
-tickerRefreshBtn = Button(tickerFrame, text='Refresh', command=tickerRefreshBtnClick)
-tickerRefreshBtn.grid(row=1)
+def tickerPairBaseChange(*args):
+  global tickerPairCoinDrd
+  tickerPairCoinDrd.destroy()
+  options = globalvars.availablePairs[tickerPairBaseVar.get()]
+  tickerPairCoinVar.set(options[0])
+  tickerPairCoinDrd = OptionMenu(tickerFrame, tickerPairCoinVar, *options)
+  tickerPairCoinDrd.grid(row=0, column=1)
+
+def tickerPairCoinChange(*args):
+  tickerRefresh()
+
+def tickerCustomPairClick():
+  tickerRefresh(custom=True)
+
+tickerPairBaseDrd = OptionMenu(tickerFrame, tickerPairBaseVar, *globalvars.availablePairs.keys())
+tickerPairBaseDrd.grid(row=0, column=0)
+tickerPairCoinDrd = OptionMenu(tickerFrame, tickerPairCoinVar, *globalvars.availablePairs[tickerPairBaseVar.get()])
+tickerPairCoinDrd.grid(row=0, column=1)
+
+tickerPairEnt = Entry(tickerFrame, width=10)
+tickerPairEnt.grid(row=1, column=0)
+
+tickerCustomPairBtn = Button(tickerFrame, text='Custom Pair', command=tickerCustomPairClick)
+tickerCustomPairBtn.grid(row=3, column=0, columnspan=3, sticky='nwes')
+
+tickerRefresh()
+
+tickerPairBaseVar.trace('w', tickerPairBaseChange)
+tickerPairCoinVar.trace('w', tickerPairCoinChange)
 
 # WALLET FRAME
 balanceUpdate(oneshot=True)
+updateDisplayCurrencies()
 walletDisplayCurrencyVar = StringVar()
 walletDisplayCurrencyVar.set('BTC')
 walletBalancesLbls = [] # list of balance labels
@@ -73,12 +131,12 @@ def walletDrawBalances(*args):
   displayCurrency = walletDisplayCurrencyVar.get()
   if displayCurrency != 'BTC':
     balance = convertCurrency('BTC', displayCurrency, balance)
-  walletTotalLbl.config(text=f'Total {displayCurrency}: {str(balance)[:10]}') # formatting for 8 digits after dots
+  walletTotalAmountLbl.config(text=str(balance)[:10]) # formatting for 8 digits after dots
   balances = globalvars.balances
   for currency in balances:
     walletBalancesLbls.append([
       Label(walletFrame, text=f'{currency}:'),
-      Label(walletFrame, text=balances[currency]['available'])
+      Label(walletFrame, text=str(balances[currency]['available'])[:10])
       ])
   line = 3
   for lbl in walletBalancesLbls:
@@ -86,21 +144,28 @@ def walletDrawBalances(*args):
     lbl[1].grid(row=line, column=1, sticky='w')
     line += 1
 
-def walletRefreshBtnClick():
+def walletRefreshClick():
   balanceUpdate(oneshot=True)
   walletDrawBalances()
 
-walletRefreshBtn = Button(walletFrame, text='Refresh', command=walletRefreshBtnClick)
-walletRefreshBtn.grid(row=0, column=0, columnspan=2)
+def walletRefresh():
+  while True:
+    walletDrawBalances()
+    print('Bing')
+    time.sleep(5)
 
-walletTotalLbl = Label(walletFrame, text='Balance')
-walletTotalLbl.grid(row=1, column=0, columnspan=2)
+walletRefreshBtn = Button(walletFrame, text='Refresh', command=walletRefreshClick)
+walletRefreshBtn.grid(row=0, column=0, columnspan=3, sticky='nesw')
 
-walletDisplayCurrencyDrd = OptionMenu(walletFrame, walletDisplayCurrencyVar, 'BTC', 'USDT', 'USDC')
+walletTotalLbl = Label(walletFrame, text='Total')
+walletTotalLbl.grid(row=1, column=0)
+walletTotalAmountLbl = Label(walletFrame)
+walletTotalAmountLbl.grid(row=1, column=1)
+
+walletDisplayCurrencyDrd = OptionMenu(walletFrame, walletDisplayCurrencyVar, *globalvars.displayCurrencies)
 walletDisplayCurrencyDrd.grid(row=1, column=2)
 walletDisplayCurrencyVar.trace('w', walletDrawBalances)
 
 # START
-tickerRefreshBtnClick()
-walletRefreshBtnClick()
+walletRefreshClick()
 root.mainloop()
