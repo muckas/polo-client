@@ -26,6 +26,12 @@ def balanceUpdate(oneshot=False):
     time.sleep(300)
 
 # FUNCTIONS
+def makePairsList():
+  pairs = []
+  for pair in globalvars.ticker.keys():
+    pairs.append(pair)
+  return pairs
+
 def updateAvailablePairs():
   pairs = globalvars.ticker.keys()
   availablePairs = {}
@@ -46,6 +52,13 @@ def updateDisplayCurrencies():
       coins.append(base)
   return coins
 
+def dbAddGlobalvar(cursor, name, value):
+  result = dbExec(cursor, 'SELECT value FROM config WHERE name = ?', [name])
+  if len(result) == 0:
+    dbExec(cursor, 'INSERT INTO config (name, value) VALUES (?, ?)', [name, str(value)])
+    result = dbExec(cursor, 'SELECT value FROM config WHERE name = ?', [name])
+  return eval(result[0][0])
+
 def loadInitialData():
   tickerUpdate(oneshot=True)
   balanceUpdate(oneshot=True)
@@ -62,18 +75,10 @@ def loadInitialData():
   data = dbExec(dbCursor, 'CREATE TABLE IF NOT EXISTS config (name TEXT, value TEXT)')
   dbConn.commit()
   # CREATE VARIABLES
-  # availablePairs
-  result = dbExec(dbCursor, 'SELECT * FROM config WHERE name = ?', ['availablePairs'])
-  if len(result) == 0:
-    dbExec(dbCursor, 'INSERT INTO config (name, value) VALUES (?, ?)', ['availablePairs', str(updateAvailablePairs())])
-  result = dbExec(dbCursor, 'SELECT value FROM config WHERE name = "availablePairs"')
-  globalvars.availablePairs = eval(result[0][0])
-  # displayCurrencies
-  result = dbExec(dbCursor, 'SELECT * FROM config WHERE name = ?', ['displayCurrencies'])
-  if len(result) == 0:
-    dbExec(dbCursor, 'INSERT INTO config (name, value) VALUES (?, ?)', ['displayCurrencies', str(updateDisplayCurrencies())])
-  result = dbExec(dbCursor, 'SELECT value FROM config WHERE name = "displayCurrencies"')
-  globalvars.displayCurrencies = eval(result[0][0])
+  globalvars.availablePairs = dbAddGlobalvar(dbCursor, 'availablePairs', updateAvailablePairs())
+  globalvars.displayCurrencies = dbAddGlobalvar(dbCursor, 'displayCurrency', updateDisplayCurrencies())
+  globalvars.pairsList = dbAddGlobalvar(dbCursor, 'pairsList', makePairsList())
+
   dbConn.commit()
 
 if __name__ == '__main__':
