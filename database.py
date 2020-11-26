@@ -62,6 +62,7 @@ def dbAddGlobalvar(cursor, name, value):
 def loadInitialData():
   tickerUpdate(oneshot=True)
   balanceUpdate(oneshot=True)
+
   # START THREADS
   tickerThread = threading.Thread(target=tickerUpdate)
   tickerThread.start()

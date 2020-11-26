@@ -31,11 +31,17 @@ tickerPriceLbl.grid(row=1, column=1)
 
 def tickerRefresh(custom=False):
   if custom:
-    pair = tickerPairEnt.get()
+    if tickerPairEnt.get() in globalvars.pairsList:
+      pair = tickerPairEnt.get()
+      base, coin = pair.split('_')
+      tickerPairBaseVar.set(base)
+      tickerPairCoinVar.set(coin)
+    else:
+      tickerPriceLbl.config(text='Bad pair')
   else:
     pair = f'{tickerPairBaseVar.get()}_{tickerPairCoinVar.get()}'
-  price = globalvars.ticker[pair]['last'][:9] # displaying first 8 digits of the price
-  tickerPriceLbl.config(text=price)
+    price = globalvars.ticker[pair]['last'][:9] # displaying first 8 digits of the price
+    tickerPriceLbl.config(text=price)
 
 def tickerPairBaseChange(*args):
   global tickerPairCoinDrd
@@ -100,6 +106,7 @@ def walletDrawBalances(*args):
     line += 1
 
 def walletRefreshClick():
+  database.balanceUpdate(oneshot=True)
   walletDrawBalances()
 
 def walletRefresh():
