@@ -97,7 +97,7 @@ def walletDrawBalances(*args):
   for currency in balances:
     walletBalancesLbls.append([
       Label(walletFrame, text=f'{currency}:'),
-      Label(walletFrame, text=str(balances[currency]['available'])[:10])
+      Label(walletFrame, text=str(balances[currency]['available'] + balances[currency]['onOrders'])[:10])
       ])
   line = 3
   for lbl in walletBalancesLbls:
