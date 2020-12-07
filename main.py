@@ -75,18 +75,18 @@ tickerPairCoinVar.trace('w', tickerPairCoinChange)
 
 # WALLET FRAME
 walletDisplayCurrencyVar = StringVar()
-walletDisplayCurrencyVar.set('BTC')
+walletDisplayCurrencyVar.set('USDT')
 walletBalancesLbls = [] # list of balance labels
 
 def convertCurrency(coinFrom, coinTo, amount):
   pair = f'{coinTo}_{coinFrom}'
-  return amount * float(globalvars.ticker[pair]['last'])
+  return float(amount) * float(globalvars.ticker[pair]['last'])
 
 def walletDrawBalances(*args):
   global walletBalancesLbls
   for lbl in walletBalancesLbls:
-    lbl[0].destroy()
-    lbl[1].destroy()
+    for _ in lbl:
+      _.destroy()
   walletBalancesLbls = []
   balance = globalvars.totalBtcBalance
   displayCurrency = walletDisplayCurrencyVar.get()
@@ -95,14 +95,20 @@ def walletDrawBalances(*args):
   walletTotalAmountLbl.config(text=str(balance)[:10]) # formatting for 8 digits after dots
   balances = globalvars.balances
   for currency in balances:
+    currencyBalance = float(balances[currency]['available']) + float(balances[currency]['onOrders'])
+    convertedBalance = balances[currency]['btcValue']
+    if displayCurrency != 'BTC':
+      convertedBalance = convertCurrency('BTC', displayCurrency, convertedBalance)
     walletBalancesLbls.append([
       Label(walletFrame, text=f'{currency}:'),
-      Label(walletFrame, text=str(balances[currency]['available'] + balances[currency]['onOrders'])[:10])
+      Label(walletFrame, text=str(currencyBalance)[:10]),
+      Label(walletFrame, text=str(convertedBalance)[:10])
       ])
   line = 3
   for lbl in walletBalancesLbls:
     lbl[0].grid(row=line, column=0, sticky='w')
     lbl[1].grid(row=line, column=1, sticky='w')
+    lbl[2].grid(row=line, column=2, sticky='w')
     line += 1
 
 def walletRefreshClick():
