@@ -15,9 +15,11 @@ root.iconphoto(True, img)
 
 # FRAMES
 tickerFrame = LabelFrame(root, text='Ticker', padx=5, pady=5)
-tickerFrame.grid(row=0, column=0, padx=5, pady=5, sticky='nw')
+tickerFrame.grid(row=0, column=0, padx=5, pady=5, sticky='nwes')
 walletFrame = LabelFrame(root, text='Wallet', padx=5, pady=5)
-walletFrame.grid(row=0, column=1, padx=5, pady=5, sticky='nw')
+walletFrame.grid(row=0, rowspan = 2, column=1, padx=5, pady=5, sticky='nwes')
+trackedFrame = LabelFrame(root, text='Tracked Pairs', padx=5, pady=5)
+trackedFrame.grid(row=1, column=0, padx=5, pady=5, sticky='nwes')
 
 
 # TICKER FRAME
@@ -25,9 +27,6 @@ tickerPairBaseVar = StringVar()
 tickerPairBaseVar.set('USDT')
 tickerPairCoinVar = StringVar()
 tickerPairCoinVar.set('BTC')
-
-tickerPriceLbl = Label(tickerFrame, text='0.00000000')
-tickerPriceLbl.grid(row=1, column=1)
 
 def tickerRefresh(custom=False):
   if custom:
@@ -40,7 +39,12 @@ def tickerRefresh(custom=False):
       tickerPriceLbl.config(text='Bad pair')
   else:
     pair = f'{tickerPairBaseVar.get()}_{tickerPairCoinVar.get()}'
-    price = globalvars.ticker[pair]['last'][:9] # displaying first 8 digits of the price
+    result = database.dbExec(database.dbCursor, 'SELECT name FROM tracked_pairs WHERE name = ?', [pair])
+    if len(result) > 0: 
+      tickerTrackPairBtn['text'] = 'Untrack Pair'
+    else:
+      tickerTrackPairBtn['text'] = 'Track Pair'
+    price = globalvars.ticker[pair]['last'][:10] # displaying first 9 digits of the price
     tickerPriceLbl.config(text=price)
 
 def tickerPairBaseChange(*args):
@@ -49,7 +53,7 @@ def tickerPairBaseChange(*args):
   options = globalvars.availablePairs[tickerPairBaseVar.get()]
   tickerPairCoinVar.set(options[0])
   tickerPairCoinDrd = OptionMenu(tickerFrame, tickerPairCoinVar, *options)
-  tickerPairCoinDrd.grid(row=0, column=1)
+  tickerPairCoinDrd.grid(row=1, column=1)
 
 def tickerPairCoinChange(*args):
   tickerRefresh()
@@ -57,16 +61,38 @@ def tickerPairCoinChange(*args):
 def tickerCustomPairClick():
   tickerRefresh(custom=True)
 
+def tickerTrackPairClick():
+  base = tickerPairBaseVar.get()
+  coin = tickerPairCoinVar.get()
+  pair = f'{base}_{coin}'
+  result = database.dbExec(database.dbCursor, 'SELECT name FROM tracked_pairs WHERE name = ?', [pair])
+  if len(result) == 0: 
+    database.dbExec(database.dbCursor, 'INSERT INTO tracked_pairs (name, base, coin) VALUES (?,?,?)', [f'{base}_{coin}', base, coin])
+    tickerTrackPairBtn['text'] = 'Untrack Pair'
+  else:
+    database.dbExec(database.dbCursor, 'DELETE FROM tracked_pairs WHERE name = ?', [pair])
+    tickerTrackPairBtn['text'] = 'Track Pair'
+  database.dbConn.commit()
+
+tickerRefreshBtn = Button(tickerFrame, text='Refresh', command=tickerRefresh)
+tickerRefreshBtn.grid(row=0, column=0, columnspan=2, sticky='nwes')
+
 tickerPairBaseDrd = OptionMenu(tickerFrame, tickerPairBaseVar, *globalvars.availablePairs.keys())
-tickerPairBaseDrd.grid(row=0, column=0)
+tickerPairBaseDrd.grid(row=1, column=0)
 tickerPairCoinDrd = OptionMenu(tickerFrame, tickerPairCoinVar, *globalvars.availablePairs[tickerPairBaseVar.get()])
-tickerPairCoinDrd.grid(row=0, column=1)
+tickerPairCoinDrd.grid(row=1, column=1)
+
+tickerPriceLbl = Label(tickerFrame, text='0.00000000')
+tickerPriceLbl.grid(row=2, column=1)
 
 tickerPairEnt = Entry(tickerFrame, width=10)
-tickerPairEnt.grid(row=1, column=0)
+tickerPairEnt.grid(row=2, column=0)
 
 tickerCustomPairBtn = Button(tickerFrame, text='Custom Pair', command=tickerCustomPairClick)
-tickerCustomPairBtn.grid(row=3, column=0, columnspan=3, sticky='nwes')
+tickerCustomPairBtn.grid(row=3, column=0, sticky='nwes')
+
+tickerTrackPairBtn = Button(tickerFrame, text='Track Pair', command=tickerTrackPairClick)
+tickerTrackPairBtn.grid(row=3, column=1, sticky='nwes')
 
 tickerRefresh()
 
@@ -115,12 +141,6 @@ def walletRefreshClick():
   database.balanceUpdate(oneshot=True)
   walletDrawBalances()
 
-def walletRefresh():
-  while True:
-    walletDrawBalances()
-    print('Bing')
-    time.sleep(5)
-
 walletRefreshBtn = Button(walletFrame, text='Refresh', command=walletRefreshClick)
 walletRefreshBtn.grid(row=0, column=0, columnspan=3, sticky='nesw')
 
@@ -133,6 +153,32 @@ walletDisplayCurrencyDrd = OptionMenu(walletFrame, walletDisplayCurrencyVar, *gl
 walletDisplayCurrencyDrd.grid(row=1, column=2)
 walletDisplayCurrencyVar.trace('w', walletDrawBalances)
 
+# TRACKED FRAME
+trackedPairsLbls = []
+def trackedUpdate():
+  global trackedPairsLbls
+  for lbl in trackedPairsLbls:
+    for _ in lbl:
+      _.destroy()
+  trackedPairsLbls = []
+  pairs = database.dbExec(database.dbCursor, 'SELECT name FROM tracked_pairs')
+  for row in pairs:
+    pair = row[0]
+    price = globalvars.ticker[pair]['last'][:9]
+    trackedPairsLbls.append([
+      Label(trackedFrame, text=pair),
+      Label(trackedFrame, text=price)
+      ])
+  line = 1
+  for lbl in trackedPairsLbls:
+    lbl[0].grid(row=line, column=0, sticky='w')
+    lbl[1].grid(row=line, column=1, sticky='w')
+    line += 1
+
+trackedRefreshBtn = Button(trackedFrame, text='Refresh', command=trackedUpdate)
+trackedRefreshBtn.grid(row=0, column=0, columnspan = 2, sticky='nwes')
+
 # START
+trackedUpdate()
 walletRefreshClick()
 root.mainloop()

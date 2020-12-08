@@ -5,6 +5,9 @@ import globalvars
 import api
 from api import polo
 
+dbConn = None
+dbCursor = None
+
 def dbExec(cursor, query, args=[]):
   cursor.execute(query, args)
   return cursor.fetchall()
@@ -53,13 +56,15 @@ def updateDisplayCurrencies():
   return coins
 
 def dbAddGlobalvar(cursor, name, value):
-  result = dbExec(cursor, 'SELECT value FROM config WHERE name = ?', [name])
+  result = dbExec(cursor, 'SELECT value FROM globalvars WHERE name = ?', [name])
   if len(result) == 0:
-    dbExec(cursor, 'INSERT INTO config (name, value) VALUES (?, ?)', [name, str(value)])
-    result = dbExec(cursor, 'SELECT value FROM config WHERE name = ?', [name])
+    dbExec(cursor, 'INSERT INTO globalvars (name, value) VALUES (?, ?)', [name, str(value)])
+    result = dbExec(cursor, 'SELECT value FROM globalvars WHERE name = ?', [name])
   return eval(result[0][0])
 
 def loadInitialData():
+  global dbConn, dbCursor
+
   tickerUpdate(oneshot=True)
   balanceUpdate(oneshot=True)
 
@@ -72,8 +77,9 @@ def loadInitialData():
   # CREATE DATABASE
   dbConn = sqlite3.connect('poloClient.db')
   dbCursor = dbConn.cursor()
-  # Create config table
-  data = dbExec(dbCursor, 'CREATE TABLE IF NOT EXISTS config (name TEXT, value TEXT)')
+  # Create tables
+  data = dbExec(dbCursor, 'CREATE TABLE IF NOT EXISTS globalvars (name TEXT, value TEXT)')
+  data = dbExec(dbCursor, 'CREATE TABLE IF NOT EXISTS tracked_pairs (name TEXT, base TEXT, coin TEXT)')
   dbConn.commit()
   # CREATE VARIABLES
   globalvars.availablePairs = dbAddGlobalvar(dbCursor, 'availablePairs', updateAvailablePairs())
